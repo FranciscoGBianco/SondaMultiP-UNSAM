@@ -1,4 +1,4 @@
-# SondaMultiP-UNSAM
+# Sonda Multiparamétrica - UNSAM - 3ia
 
 ## Introducción
 El desarrollo de instrumental de código y hardware abierto posibilita tanto la fabricación de nuevas tecnologías, así como el rediseño y adecuación de instrumentos a las necesidades propias del usuario. Esto permite el acceso libre a la documentación de diseño y funcionamiento, generando la posibilidad de que los instrumentos desarrollados puedan ser replicados, ensamblados, estudiados, modificados, compartidos y comercializados por cualquier persona de forma colaborativa. 
