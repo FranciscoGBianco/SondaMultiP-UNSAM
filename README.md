@@ -6,7 +6,7 @@ El desarrollo de instrumental de código y hardware abierto posibilita tanto la 
 El presente proyecto propone el diseño de una sonda multiparamétrica de bajo costo que permita el sensado _in situ_ y remoto de variables fisicoquímicas de relevancia ambiental como la conductividad, oxígeno disuelto, temperatura y pH en cuerpos de agua. Actualmente se cuenta con el primer prototipo basado en Arduino, el cual se busca perfeccionar con el fin de lograr un producto más robusto, económico y eficiente. En este proyecto de beca se propone realizar la integración del microcontrolador a una placa única que permita adquirir datos y almacenarlos por períodos prolongados de tiempo, reducir el consumo energético y mejorar la robustez teniendo en cuenta que operará la mayor parte del tiempo en el exterior. El proyecto posee financiamiento, por lo que se facilitarán al postulante los materiales y fondos necesarios para llevarlo a cabo de manera exitosa.
 
 <p align="center">
-<img align="center" src="https://github.com/FranciscoGBianco/SondaMultiP-UNSAM/blob/main/Sonda.jpg" width="250"  height="300">
+<img align="center" src="https://github.com/FranciscoGBianco/SondaMultiP-UNSAM/blob/main/images/Sonda.jpg" width="250"  height="300">
 </p>
 
 ## Hardware
@@ -20,5 +20,5 @@ Además, integra un dispositivo de Bluetooth de tecnología 4.0 BLE (Bluetooth L
 
 
 <p align="center">
-<img align="center" src="https://github.com/FranciscoGBianco/SondaMultiP-UNSAM/blob/main/Schematic_V1.0.png" width="750"  height="500">
+<img align="center" src="https://github.com/FranciscoGBianco/SondaMultiP-UNSAM/blob/main/images/Schematic_V1.0.png" width="750"  height="500">
 </p>
