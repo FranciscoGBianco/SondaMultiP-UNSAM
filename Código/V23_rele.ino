@@ -22,39 +22,40 @@
 #define SSpin 53
 
 //float analogValBat, voltBat = 0;
-float volt, volt4, volt7;
+float volt, volt4, volt7; // medición y calibración de pH
 float pendiente = -4.040; // nueva calibracion con boya 2.0
 float ordenada = 22.600; // nueva calibracion con boya 2.0
 unsigned long int avgval;
 //int buffer_arr[10], temp;
-float pH, T, OD;
+float pH, T, OD; // guardan el valor de las variables FQ
 char datobt;
-int minutos = 3;
-int minprev;
-char ODon = 'b';
-char ECon = 'b';
-char pHon = 'b';
+int minutos = 3; // frecuencia de medicion
+int minprev;  // variable auxiliar
+char ODon = 'b'; // prendido/apagado del sensor
+char ECon = 'b'; // prendido/apagado del sensor
+char pHon = 'b'; // prendido/apagado del sensor
 char bateria = 'b';
-char eliminar = 'b';
+char eliminar = 'b'; // eliminar datos de la SD
 char medir = 'b';
-char onprev = 'b';
-char calEC = 'b';
-char calOD = 'b';
-char calpH = 'b';
-char rectapH = 'b';
-char datosEC = 'b';
-char datosOD = 'b';
-char datospH = 'b';
-char datosT = 'b';
-char datosReloj = 'b';
-char enviar = 'b';
-float punto1, punto2 = 0;
-float puntoStd = 12880;
-String fecha = "";
-float punto = 0;
-volatile int pos;
-char titulo = 'b';
+char onprev = 'b';  // variable auxiliar
+char calEC = 'b';  // calibración conductímetro
+char calOD = 'b'; // calibración oxímetro
+char calpH = 'b'; // calibración pH
+char rectapH = 'b'; // variable auxiliar
+char datosEC = 'b'; // enviar datos
+char datosOD = 'b'; // enviar datos
+char datospH = 'b'; // enviar datos
+char datosT = 'b'; // enviar datos
+char datosReloj = 'b'; // enviar datos
+char enviar = 'b'; // enviar datos
+float punto1, punto2 = 0; // calibración conductímetro
+float puntoStd = 12880; // calibración conductímetro
+String fecha = ""; // valor de la fecha y hora actual
+float punto = 0; // pto de medición (nro. de estación, ubicación, id, etc)
+volatile int pos;  // variable auxiliar
+char titulo = 'b'; // variable auxiliar
 char apagar = 'b';
+String receivedString = ""; // variable auxiliar
 
 String EC = "";                             //a string to hold the data from the Atlas Scientific product
 String sensorstring = "";                             //a string to hold the data from the Atlas Scientific product
@@ -62,6 +63,7 @@ boolean sensor_string_complete = false;               //have we received all the
 
 Gravity_DO DO = Gravity_DO(A0);
 File datos;
+File estadoprev;
 RTC_DS3231 rtc;
 DateTime dt (__DATE__, __TIME__);
 OneWire oneWireObjeto(SensorTpin);
@@ -69,8 +71,10 @@ DallasTemperature sensorT(&oneWireObjeto); // para sensor DS18B20. Pasa referenc
 
 void setup() {  
   //apagarPines();
-  delay(100);
+  //delay(100);
   //Serial.begin(9600); //cambio a 9600 pq es un HC-06 (ORIGINAL 38400)
+  //delay(100);
+  //Serial3.begin(9600);
   delay(100);
   Serial1.begin(9600); //cambio a 9600 pq es un HC-06 (ORIGINAL 38400)
   delay(1000);
@@ -78,6 +82,7 @@ void setup() {
   setearPines();
   //Serial.begin(9600);
   //corregirReloj(); // COMENTAR UNA VEZ AJUSTADA Y VOLVER A SUBIR
+  chequearEstado();
   delay(1000);
 }
 
@@ -104,6 +109,7 @@ void guardarPunto(){
   Serial1.println("a medir");
   titulo = 'a';
   delay(100);
+  guardarEstado();
 }
 
 void hacerTodo(){
@@ -198,6 +204,7 @@ void setearRectapH(){
   medir = onprev;
   rectapH = 'b';
   delay(100);
+  guardarEstado();
 }
 
 void calibrarPeachimetro(){
@@ -260,6 +267,8 @@ void calibrarPeachimetro(){
   digitalWrite(bjtpH, LOW);
   delay(100);
   digitalWrite(relepH, LOW);
+
+  guardarEstado();
 }
 
 void medirpH(int p){
@@ -314,7 +323,7 @@ void mandarOD(){
 }
 
 void mandarpH(){
-  for (int i = 0 ; i < 4 ; i++){
+  for (int i = 0 ; i < 1 ; i++){
     medirpH(0);
     Serial1.print("pH = ");
     Serial1.println(pH);
@@ -409,11 +418,158 @@ void pegarDatosEnSD(){
     //BLT.print("no pudo abrir el archivo");
     //digitalWrite(LedPin, HIGH);
   }
+
   digitalWrite(bjtSD_RTC, LOW);
   delay(100);
   digitalWrite(releSD_RTC, HIGH);
   delay(100);
+
+  Serial3.begin(9600);
+  delay(100);
+  Serial3.print(fecha);
+  Serial3.print(";");
+  Serial3.print(OD);
+  Serial3.print(";");
+  Serial3.print(EC);
+  Serial3.print(";");
+  Serial3.print(pH);
+  Serial3.print(";");
+  Serial3.print(T);
+  Serial3.print(";");
+  Serial3.println(punto);
+  delay(100);
+  Serial3.end();
   EC = "";
+}
+
+void chequearEstado(){
+  Serial1.println("Voy a mirar los datos");
+  digitalWrite(releSD_RTC, LOW);
+  delay(1000);
+  digitalWrite(bjtSD_RTC, HIGH);
+  delay(1000);
+  if (SD.begin(SSpin)){ //tarjeta sd conectada al canals SS vía pin 4
+    //Serial.println("memoria encontrada !");
+  }else{
+    //digitalWrite(LedPin, HIGH);
+    Serial1.println("memoria no encontrada !");
+    //Serial1.println("no encontro la memoria");
+    //digitalWrite(13, HIGH);
+  }
+  estadoprev = SD.open("estado.txt");
+  if (estadoprev){
+    //delay(500);
+    //Serial.println("abri el archivo"); 
+    estadoprev.seek(0);
+    //BLT.print("*G");
+    /*while (estadoprev.available()){
+      Serial.write(estadoprev.read());
+      //pos++;
+      //delay(10);
+    }*/
+    delay(500);
+    receivedString = estadoprev.readStringUntil('\n');
+    delay(500);
+
+    //Serial.print("receivedString: ");
+    //Serial.println(receivedString);
+    
+    delay(100);
+    estadoprev.close();
+    delay(100);
+
+  }else{
+    Serial1.println("no hay estado previo");
+  }
+  delay(100);
+  digitalWrite(bjtSD_RTC, LOW);
+  delay(100);
+  digitalWrite(releSD_RTC, HIGH);
+
+  int posi = receivedString.indexOf(';');
+      if (posi != -1) {
+        String token1 = receivedString.substring(0, posi);
+        receivedString = receivedString.substring(posi + 1);
+
+        posi = receivedString.indexOf(';');
+        if (posi != -1) {
+          String token2 = receivedString.substring(0, posi);
+          receivedString = receivedString.substring(posi + 1);
+        
+          posi = receivedString.indexOf(';');
+          if (posi != -1) {
+            String token3 = receivedString.substring(0, posi);
+            receivedString = receivedString.substring(posi + 1);
+
+            posi = receivedString.indexOf(';');
+            if (posi != -1) {
+              String token4 = receivedString.substring(0, posi);
+              receivedString = receivedString.substring(posi + 1);
+            
+              pendiente = token1.toFloat();
+              ordenada = token2.toFloat();
+              medir = token3.charAt(0);
+              minutos = token4.toInt();
+              punto = receivedString.toFloat();
+              if (punto != 0){
+                titulo = 'a';
+              }
+            }
+          }
+        }
+      }
+
+  Serial1.print("m = ");
+  Serial1.println(pendiente);
+  Serial1.print("O.O. = ");
+  Serial1.println(ordenada);
+  Serial1.print("medir: ");
+  Serial1.println(medir);
+  Serial1.print("frecuencia (minutos): ");
+  Serial1.println(minutos/15);
+  Serial1.print("punto: ");
+  Serial1.println(punto);
+}
+
+void guardarEstado(){
+  digitalWrite(releSD_RTC, LOW);
+  delay(1000);
+  digitalWrite(bjtSD_RTC, HIGH);
+  delay(1000);
+
+  if (SD.begin(SSpin)){ //tarjeta sd conectada al canals SS vía pin 4
+    //Serial.println("memoria encontrada !");
+  }else{
+    //digitalWrite(LedPin, HIGH);
+    Serial1.println("memoria no encontrada !");
+    //Serial1.println("no encontro la memoria");
+    //digitalWrite(13, HIGH);
+  }
+  
+  estadoprev = SD.open("estado.txt", FILE_WRITE | O_TRUNC);
+  if (estadoprev){
+
+    estadoprev.print(pendiente);
+    estadoprev.print(";");
+    estadoprev.print(ordenada);
+    estadoprev.print(";");
+    estadoprev.print(medir);
+    estadoprev.print(";");
+    estadoprev.print(minutos);
+    estadoprev.print(";");
+    estadoprev.print(punto);
+    //estadoprev.println("nueva linea");
+    Serial1.println("Cambios guardados");
+
+    estadoprev.close();
+  }else{
+    Serial1.println("Cambios no guardados");
+  }
+
+  digitalWrite(bjtSD_RTC, LOW);
+  delay(100);
+  digitalWrite(releSD_RTC, HIGH);
+  delay(100);
 }
 
 void mandarDatos(){
@@ -819,24 +975,28 @@ void interrupcionBT(){
     minutos = 14; // tendría 1 seg más de delay con los 3200
     //msdelay = 2200;
     Serial1.println("1 min");
+    guardarEstado();
     break;
 
     case 'q':
     minutos = 216; // 
     //msdelay = 2200;
     Serial1.println("15 min");
+    guardarEstado();
     break;
 
     case 't':
     minutos = 441; // tendría 2 seg más de delay con los 3200 (en realidad eran 26 o 27 seg, no 30 --> puse 443 en vez de 442) --> 1er prueba: +8 seg, pongo en 441
     //msdelay = 1200;
     Serial1.println("30 min");
+    guardarEstado();
     break;
 
     case 'h':
     minutos = 70; // 
     //msdelay = 1200;
     Serial1.println("5 min");
+    guardarEstado();
     break;
 
     /*case '6':
@@ -848,10 +1008,12 @@ void interrupcionBT(){
     case 'n':
     minutos = 3;
     Serial1.println("15 seg");
+    guardarEstado();
     break;
 
     case 'g': 
     medir = 'a';
+    //guardarEstado();
     //Serial1.println("a medir");
     Serial1.println("escribir punto de mediciones (solo numeros)");
     break;
@@ -859,8 +1021,10 @@ void interrupcionBT(){
     case 'r':
     medir = 'b';
     titulo = 'b';
-    Serial1.println("off");
     punto = 0;
+    Serial1.println("apagando...");
+    guardarEstado();
+    Serial1.println("off");
     break;
 
     case 'y': 
@@ -1012,6 +1176,14 @@ void interrupcionBT(){
     case 's':
     digitalWrite(bjtpH, !digitalRead(bjtpH));
     break;
+
+    case 'b':
+    chequearEstado();
+    break;
+
+    case 'm':
+    guardarEstado();
+    break;
   }
 }
 
@@ -1119,7 +1291,7 @@ void apagarPines(){
   digitalWrite(A14, LOW);
   digitalWrite(A15, LOW);
   for (int i = 0; i <= 53; i++) {
-    if (i == 4 || i == 5 || i == 6 || i == 7 || i == 8 || i == 9 || i == 10 || i == 11 || i == 12 || i == 13 || i == 16 || i == 17 || i == 18 || i == 19 || i == 20 || i == 21 || i == 48 || i == 49 || i == 50 || i == 51 || i == 52 || i == 53){
+    if (i == 4 || i == 5 || i == 6 || i == 7 || i == 8 || i == 9 || i == 10 || i == 11 || i == 12 || i == 13 || i == 14 || i == 15 || i == 16 || i == 17 || i == 18 || i == 19 || i == 20 || i == 21 || i == 48 || i == 49 || i == 50 || i == 51 || i == 52 || i == 53){
       
     }else{
       pinMode(i, OUTPUT);
